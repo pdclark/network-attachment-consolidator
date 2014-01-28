@@ -1,10 +1,6 @@
-/**
- * Network Attachment Consolidator
+/*! Network Attachment Consolidator - v0.1.0
  * http://knowmike.com
- *
- * Copyright (c) 2014 Michael Jordan
- * Licensed under the GPLv2+ license.
- */
+ * Copyright (c) 2014; * Licensed GPLv2+ */
 jQuery(document).ready(function($){
 	'use strict';
 	

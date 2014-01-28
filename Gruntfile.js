@@ -22,9 +22,12 @@ module.exports = function( grunt ) {
 		jshint: {
 			all: [
 				'Gruntfile.js',
-				'assets/js/src/**/*.js',
+				//'assets/js/src/**/*.js',
 				'assets/js/test/**/*.js'
 			],
+			globals: {
+				$: false
+			},
 			options: {
 				curly:   true,
 				eqeqeq:  true,
@@ -36,6 +39,7 @@ module.exports = function( grunt ) {
 				undef:   true,
 				boss:    true,
 				eqnull:  true,
+				devel: true,
 				globals: {
 					exports: true,
 					module:  false
@@ -106,44 +110,10 @@ module.exports = function( grunt ) {
 					debounceDelay: 500
 				}
 			}
-		},
-		clean: {
-			main: ['release/<%= pkg.version %>']
-		},
-		copy: {
-			// Copy the plugin to a versioned release directory
-			main: {
-				src:  [
-					'**',
-					'!node_modules/**',
-					'!release/**',
-					'!.git/**',
-					'!.sass-cache/**',
-					'!css/src/**',
-					'!js/src/**',
-					'!img/src/**',
-					'!Gruntfile.js',
-					'!package.json',
-					'!.gitignore',
-					'!.gitmodules'
-				],
-				dest: 'release/<%= pkg.version %>/'
-			}		
-		},
-		compress: {
-			main: {
-				options: {
-					mode: 'zip',
-					archive: './release/network_attachment_consolidator.<%= pkg.version %>.zip'
-				},
-				expand: true,
-				cwd: 'release/<%= pkg.version %>/',
-				src: ['**/*'],
-				dest: 'network_attachment_consolidator/'
-			}		
 		}
 	} );
 	
+		
 	// Load other tasks
 	grunt.loadNpmTasks('grunt-contrib-jshint');
 	grunt.loadNpmTasks('grunt-contrib-concat');
@@ -153,16 +123,10 @@ module.exports = function( grunt ) {
 	grunt.loadNpmTasks('grunt-contrib-sass');
 	
 	grunt.loadNpmTasks('grunt-contrib-watch');
-	grunt.loadNpmTasks( 'grunt-contrib-clean' );
-	grunt.loadNpmTasks( 'grunt-contrib-copy' );
-	grunt.loadNpmTasks( 'grunt-contrib-compress' );
 	
 	// Default task.
 	
 	grunt.registerTask( 'default', ['jshint', 'concat', 'uglify', 'sass', 'cssmin'] );
-	
-	
-	grunt.registerTask( 'build', ['default', 'clean', 'copy', 'compress'] );
 
 	grunt.util.linefeed = '\n';
 };

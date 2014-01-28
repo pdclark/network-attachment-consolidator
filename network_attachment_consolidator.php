@@ -43,6 +43,8 @@ define( 'naconsolidator_PATH',    dirname( __FILE__ ) . '/' );
 class Network_Attachment_Consolidator {
 	
 	private static $nac_duplicate_images;
+
+	private static $nil_settings;
 	
 	/**
   	 * Default initialization for the plugin:
@@ -54,6 +56,12 @@ class Network_Attachment_Consolidator {
 		load_textdomain( 'naconsolidator', WP_LANG_DIR . '/naconsolidator/naconsolidator-' . $locale . '.mo' );
 		load_plugin_textdomain( 'naconsolidator', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
 		
+		// Blog to use for shared library: default to site ID 1
+		self::$nil_settings = get_site_option( 'nil_settings', 1 );
+
+		// Enqueue
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'admin_enqueue_scripts' ) );
+
 		// Add the super admin menu item
 		add_action( 'network_admin_menu', array( __CLASS__, 'network_admin_page' ) );
 
@@ -62,13 +70,30 @@ class Network_Attachment_Consolidator {
 
 		// Workaround for WP Settings API bug with multisite
 		add_action( 'network_admin_edit_nac-settings', array( __CLASS__, 'save_nac_settings') );
+
+		add_action( 'wp_ajax_naconsolidator_ajax', array( __CLASS__, 'naconsolidator_ajax' ) );
 	}
 	
+	/**
+    * Enqueue
+    *
+    */
+    public static function admin_enqueue_scripts( $hook ) {
+    	if ( $hook == 'settings_page_network_attachment_consolidator'){
+			wp_enqueue_script( 'naconsolidation-ajax', naconsolidator_URL ."assets/js/network_attachment_consolidator.min.js", array('jquery') );
+    		wp_localize_script( 'naconsolidation-ajax', 'nac_vars', array(
+				'nac_nonce' => wp_create_nonce( 'nac_nonce' )
+				) 
+			);
+    	}
+    }
+
+
    /**
     * Adds the options subpanel
     *
     */
-    public static function network_admin_page() {
+    public static function network_admin_page( ) {
 		add_submenu_page( 'settings.php', 'Attachment Consolidator', 'Attachment Consolidator', 'administrator', basename(__FILE__), array( __CLASS__, 'admin_options_page' ) );
     }
 
@@ -80,23 +105,32 @@ class Network_Attachment_Consolidator {
     	echo '<div class="wrap">';
 		echo '<h2>Network Attachment Consolidator</h2>';
 		echo '<p>This plugin is still in development. <strong> BACKUP </strong> your files and database before running!</p>';
-		echo '<form name="exclude_cpt_form" method="post" action="edit.php?action=nac-settings">';
+		echo '<form name="naconsolidator_stepone_form" method="post" action="edit.php?action=nac-settings">';
 		wp_nonce_field('nac-settings','nac-nonce');
 		submit_button( 'Step 1: Detect all duplicate image attachments' );
 		echo '</form>';
-		echo '</div>';
 
+		// If image duplicate array exists, display option for Step 2
     	self::$nac_duplicate_images	= get_option( 'nac_duplicate_images');
     	if( !empty(  self::$nac_duplicate_images ) ){
-    		echo '<p>All Duplicate Image Attachments on this Network:</p>';
-    		echo '<pre>';
-    		print_r(  self::$nac_duplicate_images );
-    		echo '</pre>';
+
+    		$count = count( self::$nac_duplicate_images );
+    		echo "Step 1 complete! $count duplicates found.";
+
+			echo '<p><div class="button button-primary" id="naconsolidator-run" >Step 2: Consolidate duplicates</div></p>';
+			 
+			echo '<img src="'.admin_url( '/images/wpspin_light.gif' ).'" class="waiting" id="naconsolidator-loading" style="display: none;"> 
+				  Step 2 progress: <span id="naconsolidator_progress">0</span> of '.$count.' images.';
+
+    		echo '<div id="naconsolidator_image_object" style="display: none;">';
+    		echo json_encode( self::$nac_duplicate_images );
+    		echo '</div>';
     	}
+    	echo '</div>';
     }
 
 	/**
-	 * The WordPress API behaving wierd on Multisite :(
+	 * Process & save array of duplicate image attachments
 	 *
 	 */
 	public static function save_nac_settings( ){
@@ -188,6 +222,17 @@ class Network_Attachment_Consolidator {
 			exit;
 		}
 	}
+
+	public static function naconsolidator_ajax(){
+		if( !isset( $_POST['nac_nonce'] ) || !wp_verify_nonce( $_POST['nac_nonce'], 'nac_nonce' ) )
+			die( 'Permissions check failed' );
+
+		// All info on one duplicate image
+		$image_data = $_POST['image_data'];
+		//fb::log($image_data, '$image_data');
+		die();
+	}
+
 }
 
 Network_Attachment_Consolidator::init();
