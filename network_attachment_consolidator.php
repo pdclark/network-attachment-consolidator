@@ -279,8 +279,8 @@ class Network_Attachment_Consolidator {
 			// If it doesn't exist, create it.
 			if ( ! $exists ) {
 				switch_to_blog( self::$nil_id );
-				$img_url = $image[0]['url_full'];
-				$image['network'] = self::_sideload_image( $img_url, 0 );
+				$img_url = $image['images'][ $i ]['url_full'];
+				$image['network'] = self::_sideload_image( $img_url );
 			}
 		} else {
 			// Replace blog images with network entry
@@ -338,7 +338,7 @@ class Network_Attachment_Consolidator {
 			}
 
 			// do the validation and storage stuff
-			$id = media_handle_sideload( $file_array, 1, $desc );
+			$id = media_handle_sideload( $file_array, 0 );
 			// If error storing permanently, unlink and send error.
 			if ( is_wp_error($id) ) {
 				@unlink($file_array['tmp_name']);
@@ -350,7 +350,7 @@ class Network_Attachment_Consolidator {
 				'img_id'      => $id,
 				'url_full'    => $src,
 				'blog_id'     => self::$nil_id,
-				'post_parent' => 1,
+				'post_parent' => 0,
 			);
 		}
 	}
