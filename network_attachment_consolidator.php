@@ -248,8 +248,7 @@ class Network_Attachment_Consolidator {
 		// Set up the first image for processing and then remove it
 		reset ( $images );
 		$first_key = key( $images );
-		$first_image = array_shift( $images );
-		$first_image['name'] = $first_key;
+		$first_image = array( 'images' => array_shift( $images ), 'name' => $first_key );
 		update_site_option( '_nac_duplicate', $first_image );
 		update_site_option( '_nac_duplicates', $images );
 		update_site_option( 'nac_status', 'Process Image' );
@@ -264,16 +263,15 @@ class Network_Attachment_Consolidator {
 			update_site_option( 'nac_status', 'Consolidate Images' );
 			wp_send_json_success( 'Warning, image failed. Attempting to recover.' );
 		}
-		arsort($image);
 		// See if we have this image in the network library
 		if ( ! array_key_exists( 'network', $image ) ) {
 			$exists = false;
 			// See if it already exists.
-			foreach( $image as $i => $site ) {
+			foreach( $image['images'] as $i => $site ) {
 				// purposful fuzzy match as ids switch between strings and integers for some reason.
-				if ( is_int( $i ) && $site['blog_id'] == self::$nil_id ) {
-					$image['network'] = $image[ $i ];
-					unset( $image[ $i ] );
+				if ( $site['blog_id'] == self::$nil_id ) {
+					$image['network'] = $site;
+					unset( $image['images'][ $i ] );
 					$exists = true;
 					break;
 				}
@@ -286,14 +284,14 @@ class Network_Attachment_Consolidator {
 			}
 		} else {
 			// Replace blog images with network entry
-			$entry = array_shift( $image );
+			$entry = array_shift( $image['images'] );
 			switch_to_blog( $entry['blog_id'] );
 			$post = get_post( $entry['post_parent'] );
 			if ( $post ) {
 				//Make sure this isn't this entries featured image, since there is no
 				//way to support that currently.
 				$feat_id = get_post_thumbnail_id( $post->ID );
-				$reg = '/http:\/\/[^"]*?' . str_replace( '.', '.*?', $image['name'] ) . '/';
+				$reg = self::_prepare_regex( $image['name'] );
 				preg_match_all( $reg, $post->post_content, $matches );
 				if ( $entry['img_id'] !== $feat_id && ! empty( $matches[0] ) ) {
 					$new_content = $post->post_content;
@@ -311,7 +309,7 @@ class Network_Attachment_Consolidator {
 			}
 		}
 		// Continue processing each blog one at a time.	
-		if ( 2 < count( $image ) ) {
+		if ( 0 < count( $image['images'] ) ) {
 			update_site_option( '_nac_duplicate', $image );
 			wp_send_json_success( 'Process ' . $image['name'] );
 		} else {
@@ -355,6 +353,12 @@ class Network_Attachment_Consolidator {
 				'post_parent' => 1,
 			);
 		}
+	}
+
+	private static function _prepare_regex( $name ) {
+		$extension = str_replace( '/', '\/', substr( strrchr( $name, '.' ), 1 ) );
+		$name = str_replace( '/', '\/', rtrim( $name, '.' . $extension ) );
+		return '/https?:\/\/[^"]*?(?:' . $name . ').*?(?:' . $extension . ')/';
 	}
 
 	public static function naconsolidator_ajax(){
