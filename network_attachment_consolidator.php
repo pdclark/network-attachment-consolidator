@@ -108,6 +108,7 @@ class Network_Attachment_Consolidator {
 	 *
 	 */
 	public static function admin_options_page() {
+		$ignore_galleries = ( !! get_site_option( '_nac_ignore_galleries' ) ); //woot for php-izing a JS trick.
 		echo '<div class="wrap">';
 		echo '<h2>Network Attachment Consolidator</h2>';
 		echo '<p>This plugin is still in development. <strong> BACKUP </strong> your files and database before running!</p>';
@@ -115,6 +116,9 @@ class Network_Attachment_Consolidator {
 		echo '<strong>Warning:</strong> This plugin requires javascript and it is not currently available.';
 		echo 'Please turn on javascript or use a javascript enabled browser and reload this page.';
 		echo '</noscript>';
+		echo '<p><input type="checkbox" id="nac-ignore-galleries" ' . checked( true, $ignore_galleries, false ) . ' /> ';
+		echo '<label for="nac-ignore-galleries">Ignore Galleries</label></p>';
+		echo '<p class="description">Ignoring galleries can help remove a significantly larger amount of images shared by the newtork. However, this comes at the cost of possibly removing some images from existing galleries as the attachment to which they belong will no longer exist.</p><br /><br />';
 		self::submit_button( 'Start' );
 		self::submit_button( 'Stop', array( 'disabled' => 'disabled' ) );
 		echo '<h3>Status:</h3>';
@@ -290,6 +294,7 @@ class Network_Attachment_Consolidator {
 			if ( $post ) {
 				//Make sure this isn't this entries featured image, since there is no
 				//way to support that currently.
+				$ignore_galleries = ( !! get_site_option( '_nac_ignore_galleries' ) );
 				$feat_id = get_post_thumbnail_id( $post->ID );
 				$reg = self::_prepare_regex( $image['name'] );
 				preg_match_all( $reg, $post->post_content, $matches );
@@ -300,10 +305,12 @@ class Network_Attachment_Consolidator {
 						$new_content = str_replace( $match, $image['network']['url_full'], $new_content );
 						$new_excerpt = str_replace( $match, $image['network']['url_full'], $new_excerpt );
 					}
+					wp_update_post( array( 'ID' => $post->ID, 'post_content' => $new_content, 'post_exerpt' => $new_excerpt ) );
 					/**
 					 * @todo  Come up with some way to deal with galleries since they are ID based, not URL based.
 					 */
-					wp_update_post( array( 'ID' => $post->ID, 'post_content' => $new_content, 'post_exerpt' => $new_excerpt ) );
+				}
+				if ( $ignore_galleries || ! empty( $matches[0] ) ) {
 					wp_delete_attachment( $entry['img_id'], true );
 				}
 			}
@@ -379,16 +386,18 @@ class Network_Attachment_Consolidator {
 		// If we get here, processing failed, send an error.
 		wp_send_json_error( 'no valid step found.' );
 	}
+
+	public static function nac_ignoregalleries_ajax() {
+		if( empty( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'nac-fire' ) ) {
+			wp_send_json_error( 'This request appears to be invalid.' );
+		}
+		$current = ( !! get_site_option( '_nac_ignore_galleries' ) );
+		if ( isset( $_POST['ignore'] ) ) {
+			$current = ( '1' === $_POST['ignore'] );
+			update_site_option( '_nac_ignore_galleries', $current );
+		}
+		wp_send_json_success( $current );
+	}
 }
 // Fire immediately following the Network Image Library init.
 add_action( 'nil_init', array( 'Network_Attachment_Consolidator', 'init' ) );
-
-/**
-* Activate the plugin
-*/
-function naconsolidator_activate() {
-// First load the init scripts in case any rewrite functionality is being loaded
-	Network_Attachment_Consolidator::init();
-	flush_rewrite_rules();
-}
-register_activation_hook( __FILE__, 'naconsolidator_activate' );

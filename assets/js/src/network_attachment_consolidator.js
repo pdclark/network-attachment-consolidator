@@ -16,11 +16,31 @@
 		return;
 	}
 	// Cache our needed selectors.
-	var $start  = $( document.getElementById( 'nac-start' ) ),
+	var $ignore = $( document.getElementById( 'nac-ignore-galleries' ) ),
+		$start  = $( document.getElementById( 'nac-start' ) ),
 		$stop   = $( document.getElementById( 'nac-stop' ) ),
 		$status = $( document.getElementById( 'nac-status' ) ),
 		$step   = $( document.getElementById( 'nac-next-step' ) );
 	// Define Handlers
+	function ignoreGalleries( e ) {
+		e.preventDefault();
+		$ignore.prop( 'disabled', true );
+		wp.ajax.send({
+			'data': {
+				'action': 'nac-ignoregalleries-ajax',
+				'nonce' : nonce,
+				'ignore': ( $ignore.prop('checked') ) ? '1' : '0'
+			}
+		})
+		.done( handleIgnoreDone )
+		.fail( handleIgnoreDone );
+	}
+	function handleIgnoreDone( val ) {
+		if ( 'boolean' === typeof val ) {
+			$ignore.prop('checked', val );
+		}
+		$ignore.prop( 'disabled', false );
+	}
 	function handleNacStart( e ) {
 		e.preventDefault();
 		if ( ! $start.is( ':disabled' ) ) {
@@ -75,6 +95,7 @@
 		}
 	}
 	// Bind handlers
+	$ignore.on( 'change', ignoreGalleries );
 	$start.on( 'click', handleNacStart );
 	$stop.on(  'click', handleNacStop );
 	$( window ).on( 'beforeunload', handleUnload );
