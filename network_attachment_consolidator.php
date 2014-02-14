@@ -67,6 +67,7 @@ class Network_Attachment_Consolidator {
 			$method = array( __CLASS__, str_replace( '-', '_', $_REQUEST['action'] ) );
 			if ( is_callable( $method ) ) {
 				add_action( 'wp_ajax_' . $_REQUEST['action'], $method );
+				ini_set( 'memory_limit', '1024M' );
 			}
 		}
 	}
