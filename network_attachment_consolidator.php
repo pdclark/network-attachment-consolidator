@@ -306,7 +306,7 @@ class Network_Attachment_Consolidator {
 					 * @todo  Come up with some way to deal with galleries since they are ID based, not URL based.
 					 */
 				}
-				if ( $ignore_galleries || ! empty( $matches[0] ) ) {
+				if ( $ignore_galleries || ! empty( $matches[0] ) || false === strpos( $post->post_content, '[gallery' ) ) {
 					wp_delete_attachment( $entry['img_id'], true );
 				}
 			}
